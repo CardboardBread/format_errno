@@ -4,11 +4,22 @@
 
 #define ERRLEN 256
 
-typedef struct Error { // all fields are on the heap
+typedef struct Errors { // all fields are on the heap
   char *name;
   char *number;
   char *description;
-  Error *next;
+  struct Errors *next;
+} Error;
+
+int append(Error new, Error *root) {
+  while (root->next != NULL) {
+    root = root->next;
+  }
+
+  root->next = malloc(sizeof(Error));
+  *(root->next) = new;
+
+  return 0;
 }
 
 int main() {
@@ -17,7 +28,11 @@ int main() {
   int maxnum = 0;
   int maxdesc = 0;
 
-  Error *root;
+  Error *root = malloc(sizeof(Error));
+  root->name = NULL;
+  root->number = NULL;
+  root->description = NULL;
+  root->next = NULL;
 
   char errline[ERRLEN];
   while (fgets(errline, ERRLEN, stdin) != NULL) {
@@ -61,25 +76,30 @@ int main() {
     if (fdesclen > maxdesc) maxdesc = fdesclen;
 
     // make new error struct, append it to root list;
-    char *nname = malloc(sizeof(char) * fnamelen);
-    char *nnum = malloc(sizeof(char) * fnumlen);
-    char *ndesc = malloc(sizeof(char) * fdesclen);
+    char *nname = malloc(sizeof(char) * fnamelen + 1);
+    strcpy(nname, errname);
+
+    char *nnum = malloc(sizeof(char) * fnumlen + 1);
+    strcpy(nnum, errnum);
+
+    char *ndesc = malloc(sizeof(char) * fdesclen + 1);
+    strcpy(ndesc, errdesc);
+
+    Error nerr;
+    nerr.name = nname;
+    nerr.number = nnum;
+    nerr.description = ndesc;
+    nerr.next = NULL;
+
+    append(nerr, root);
   }
 
-  return 0;
-}
-
-Error new(char *name, int namelen, char *num, int numlen, char *desc, int desclen) {
-
-}
-
-int append(Error new, Error *root) {
-  while (root->next != NULL) {
-    root = root->next;
+  Error *cur;
+  for (cur = root->next; cur->next != NULL; cur = cur->next) {
+    printf("%*s ", maxname, cur->name);
+    printf("%s ", cur->number);
+    printf("%s", cur->description);
   }
-
-  root->next = malloc(sizeof(struct Error));
-  *(root->next) = new;
 
   return 0;
 }
