@@ -33,9 +33,9 @@ int main() {
   int maxdesc = 0;
 
   Error *root = malloc(sizeof(Error)); // dummy head node
-  root->name = NULL;
-  root->number = NULL;
-  root->description = NULL;
+  root->name = "NAME";
+  root->number = "NUM";
+  root->description = "DESCRIPTION\n";
   root->next = NULL;
 
   char errline[ERRLEN];
@@ -106,9 +106,9 @@ int main() {
 
   // iterate through each element, print it out with nice spacing
   Error *cur;
-  for (cur = root->next; cur->next != NULL; cur = cur->next) {
+  for (cur = root; cur->next != NULL; cur = cur->next) {
     printf("%*s ", maxname, cur->name);
-    printf("%s ", cur->number);
+    printf("%-*s ", maxnum, cur->number);
     printf("%s", cur->description);
   }
 
