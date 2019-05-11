@@ -212,7 +212,7 @@ int main() {
   for (cur = root; cur->next != NULL; cur = cur->next) {
     printf("%*s ", maxname, cur->name);
     printf("%-*s ", maxnum, cur->number);
-    printf("%s\n", cur->description);
+    printf("%-*s\n", maxdesc, cur->description);
   }
 
   return 0;
