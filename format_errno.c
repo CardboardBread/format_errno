@@ -21,57 +21,50 @@ struct error_struct {
 };
 typedef struct error_struct Error;
 
-// goes to the bottom of the list of error structs, mallocs a new space and
-// copies the values of the given error into the heap space
-int append(Error new, Error *root) {
-  if (root == NULL) {
+// given a root Error, finds the tail and adds the new to the end
+int append(Error *new, Error *root) {
+  // sanitizing inputs
+  if (new == NULL || root == NULL) {
     return -1;
   }
 
-  while (root->next != NULL) {
+  // loop to end of linked list
+  while(root->next != NULL) {
     root = root->next;
   }
 
-  root->next = malloc(sizeof(Error));
-  *(root->next) = new;
+  // insert new Error
+  root->next = new;
 
   return 0;
 }
 
-// assumes buffer has size ERRLEN
-int read_to_buf(int fd, char *buffer, int *filled) {
-  if (fd < 0 || buffer == NULL || filled == NULL) {
+// returns the # of bytes read, otherwise -1
+int read_to_buf(const int fd, char *buffer, int inbuf, const int bufsize) {
+  // sanitizing inputs
+  if (fd < 0 || buffer == NULL || inbuf < 0 || bufsize < inbuf) {
     return -1;
   }
 
-  if (*filled >= ERRLEN) {
+  // in case buffer already full
+  if (inbuf == bufsize) {
     return 0;
   }
 
-  char *head = buffer + *filled;
-  int left = ERRLEN - *filled;
+  // calculating open space, and how much is left
+  char *head = buffer + inbuf;
+  int left = bufsize - inbuf;
 
-  int nbytes = read(fd, head, left);
-  //if (nbytes == EOF) return -1;
-  if (nbytes > 0) {
-    *filled += nbytes;
-    //left -= nbytes;
-    //head += nbytes;
-    return nbytes;
-  } else if (nbytes == 0) {
-    return 0;
-  } else {
-    return -1;
-  }
-
-  return -1;
+  return read(fd, head, left);
 }
 
 int find_newline(const char *buffer, int size) {
+  // checking proper arguments
   if (buffer == NULL || size < 1) {
     return -1;
   }
 
+  // find a '\n' and return where
   int index;
   for (index = 0; index < size; index++) {
     if (buffer[index] == '\n') {
@@ -160,12 +153,14 @@ int main() {
       dup2(stdfd[1], STDOUT_FILENO);
       close(stdfd[1]);
 
+      // replace sterr with pipe
       dup2(stdfd[1], STDERR_FILENO);
 
+      // exec "errno -l"
       execvp(execname, execargs);
       exit(1);
     default:
-      //close(stdfd[0]);
+      // close write channel for child pipe
       close(stdfd[1]);
 
       // wait for child to exit
@@ -179,7 +174,7 @@ int main() {
   int maxdesc = 0;
 
   // dummy head node
-  Error *root = malloc(sizeof(Error));
+  Error *root = (Error *) malloc(sizeof(Error));
   root->name = "NAME";
   root->number = "NUM";
   root->description = "DESCRIPTION";
@@ -190,12 +185,15 @@ int main() {
   int inbuf = 0;
   int consumed = 0;
 
-  while (read_to_buf(stdfd[0], errline, &inbuf) > 0) {
-
+  // read as long as you can
+  int nbytes = 0;
+  while ((nbytes = read_to_buf(stdfd[0], errline, inbuf, ERRLEN)) > 0) {
+    // track how much is read, find a message in the buffer
+    inbuf += nbytes;
     consumed = find_newline(errline + consumed, inbuf);
 
-    Error nerr;
-    assemble_error(errline, consumed, &nerr, &maxname, &maxnum, &maxdesc);
+    Error *nerr = (Error *) malloc(sizeof(Error));
+    assemble_error(errline, consumed, nerr, &maxname, &maxnum, &maxdesc);
 
     // put this at the bottom of the list
     append(nerr, root);
