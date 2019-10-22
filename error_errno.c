@@ -197,6 +197,10 @@ int init_error_struct(struct error_t **target) {
 
   // allocate and initialize struct
   *target = malloc(sizeof(struct error_t));
+  if (*target == NULL) {
+    return LIBFAIL;
+  }
+
   (*target)->next = NULL;
 
   // initialize sub-structs
@@ -220,6 +224,10 @@ int init_errlist_struct(struct errlist_t **target) {
 
   // allocate and initialize struct
   *target = malloc(sizeof(struct errlist_t));
+  if (*target == NULL) {
+    return LIBFAIL;
+  }
+  
   (*target)->head = NULL;
   (*target)->len = 0;
 

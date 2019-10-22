@@ -221,6 +221,10 @@ int init_str_struct(struct str_t **target) {
 
   // allocate and initialize struct
   *target = malloc(sizeof(struct str_t));
+  if (*target == NULL) {
+    return LIBFAIL;
+  }
+
   (*target)->buf = NULL;
   (*target)->len = 0;
 
@@ -235,7 +239,15 @@ int init_buf_struct(struct buf_t **target, const int size) {
 
   // allocate and initialize struct
   *target = malloc(sizeof(struct buf_t));
+  if (*target == NULL) {
+    return LIBFAIL;
+  }
+
   (*target)->buf = malloc(sizeof(char) * size);
+  if ((*target)->buf == NULL) {
+    return LIBFAIL;
+  }
+
   memset((*target)->buf, 0, size);
   (*target)->len = size;
   (*target)->inbuf = 0;
@@ -252,6 +264,10 @@ int init_field_struct(struct field_t **target) {
 
   // allocate and initialize struct
   *target = malloc(sizeof(struct field_t));
+  if (*target == NULL) {
+    return LIBFAIL;
+  }
+  
   (*target)->first = -1;
   (*target)->second = -1;
 
