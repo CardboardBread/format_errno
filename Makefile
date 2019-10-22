@@ -10,4 +10,4 @@ format_errno: format_errno.o data_errno.o error_errno.o
 	gcc ${FLAGS} -c $<
 
 clean:
-	rm -f *.o format_errno
+	rm -f *.o *.gch format_errno

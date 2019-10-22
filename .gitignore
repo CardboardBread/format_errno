@@ -3,8 +3,6 @@
 
 # Precompiled Headers
 *.gch
-*.pch
 
 # Executables
-*.out
 format_errno
