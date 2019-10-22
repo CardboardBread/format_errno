@@ -3,7 +3,7 @@ FLAGS = -Wall -Werror -std=gnu99 -g
 
 all: format_errno
 
-format_errno: format_errno.o
+format_errno: format_errno.o data_errno.o error_errno.o
 	gcc ${FLAGS} -o $@ $^
 
 %.o : %.c

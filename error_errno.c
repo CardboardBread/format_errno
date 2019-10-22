@@ -1,13 +1,14 @@
 #include <stdlib.h>
+
 #include "error_errno.h"
 #include "data_errno.h"
 
 // adds an error struct to the end of the given linked list of errors
-// assumes the given list is null terminated, fails otherwise
+// list must be null-terminated
 // can be used to concatenate two lists
 int append_err(struct errlist_t *list, struct error_t *new) {
   // checking valid arguments
-  if (head == NULL || new == NULL) {
+  if (list == NULL || new == NULL) {
     return INVAARG;
   }
 
@@ -20,28 +21,22 @@ int append_err(struct errlist_t *list, struct error_t *new) {
 
   // loop until null terminator (end)
   struct error_t *curr;
-  for (curr = list->head; curr->next != NULL; curr = curr->next) {
-
-    // reached end of circle
-    if (curr->next == list->head) {
-      new->next = list->head;
-      break;
-    }
-  }
+  for (curr = list->head; curr->next != NULL; curr = curr->next);
 
   // place new struct at end
   curr->next = new;
 
+  // update tracker field
   list->len++;
+
   return SUCCESS;
 }
 
 // adds an error struct to the given index in a given linked list of errors
-// works with circular lists as well as null terminated lists
-// TODO: can you edit a pointer you got from a const pointer?
+// works only null terminated lists
 int add_err(struct errlist_t *list, struct error_t *new, const int index) {
   // checking valid arguments
-  if (head == NULL || new == NULL || index < 0) {
+  if (list == NULL || new == NULL || index < 0) {
     return INVAARG;
   }
 
@@ -60,14 +55,7 @@ int add_err(struct errlist_t *list, struct error_t *new, const int index) {
   // loop to node before target
   int track = 0;
   struct error_t *curr;
-  for (curr = list->head; curr->next != NULL && track < index - 1; curr = curr->next) {
-    track++;
-
-    // reached end of circle
-    if (curr->next == list->head) {
-      return ENDFLST;
-    }
-  }
+  for (curr = list->head; curr->next != NULL && track < index - 1; curr = curr->next, track++);
 
   if (track == index - 1) {
     // insert at index
@@ -80,24 +68,25 @@ int add_err(struct errlist_t *list, struct error_t *new, const int index) {
     return INDXDNE;
   }
 
+  // update tracker field
   list->len++;
+
   return SUCCESS;
 }
 
 // removes an error struct from the given index from the given linked list of errors
 // places the removed error in the given pointer ret, if it is non-null
-// works with circular and null terminated lists
-int rem_err(struct errlist_t *head, struct error_t **ret, const int index) {
+// works with only null terminated lists
+int rem_err(struct errlist_t *list, struct error_t **ret, const int index) {
   // checking valid inputs
-  if (head == NULL || list->head == NULL || index < 0) {
+  if (list == NULL || list->head == NULL || index < 0) {
     return INVAARG;
   }
 
   // first index case
-  struct error_t sav;
+  struct error_t *sav;
   if (index == 0) {
     sav = list->head;
-
     list->head = sav->next;
 
     // can we save the removed?
@@ -105,24 +94,19 @@ int rem_err(struct errlist_t *head, struct error_t **ret, const int index) {
       *ret = sav;
     }
 
+    // update tracker field
     list->len--;
+
     return SUCCESS;
   }
 
   // loop to node before target
   int track = 0;
   struct error_t *curr;
-  for (curr = list->head; curr->next != NULL && track < index - 1; curr = curr->next) {
-    track++;
-
-    // reached end of circle
-    if (curr->next == list->head) {
-      return ENDFLST;
-    }
-  }
+  for (curr = list->head; curr->next != NULL && track < index - 1; curr = curr->next, track++);
 
   // did we stop before the target?
-  struct error_t out;
+  struct error_t *out;
   if (track == index - 1) {
     // remove at index
     out = curr->next;
@@ -147,20 +131,22 @@ int rem_err(struct errlist_t *head, struct error_t **ret, const int index) {
     *ret = out;
   }
 
+  // update tracker field
   list->len--;
+
   return SUCCESS;
 }
 
 // replaces an error at a given index with a given error
 // places the replaced error in the given pointer old, if it is non-null
-int repl_err(struct errlist_t *head, struct error_t *new, struct error_t **old, const int index) {
+int repl_err(struct errlist_t *list, struct error_t *new, struct error_t **old, const int index) {
   // check valid inputs
   if (list == NULL || list->head == NULL || new == NULL || index < 0) {
     return INVAARG;
   }
 
   // first index case
-  struct error_t sav;
+  struct error_t *sav;
   if (index == 0) {
     sav = list->head;
     list->head = new;
@@ -178,14 +164,7 @@ int repl_err(struct errlist_t *head, struct error_t *new, struct error_t **old, 
   // loop to node before target
   int track = 0;
   struct error_t *curr;
-  for (curr = head; curr->next != NULL && track < index - 1; curr = curr->next) {
-    track++;
-
-    // reached end of circle
-    if (curr->next == list->head) {
-      return ENDFLST;
-    }
-  }
+  for (curr = list->head; curr->next != NULL && track < index - 1; curr = curr->next, track++);
 
   // did we stop before the target?
   if (track == index - 1) {
@@ -210,17 +189,39 @@ int repl_err(struct errlist_t *head, struct error_t *new, struct error_t **old, 
   return SUCCESS;
 }
 
-// scans and parses a buffer, assembling it into the given address
-int assemble_error(struct buf_t *buffer, struct error_t *error) {
-  // check valid arguments
-  if (buffer == NULL || error == NULL) {
+int init_error_struct(struct error_t **target) {
+  // check invalid argument
+  if (target == NULL) {
     return INVAARG;
   }
 
-  // find the first two spaces
-  int spaces[2];
-  if (find_splitter(buffer, spaces) > 0) {
-    // fail
+  // allocate and initialize struct
+  *target = malloc(sizeof(struct error_t));
+  (*target)->next = NULL;
+
+  // initialize sub-structs
+  (*target)->name.buf = NULL;
+  (*target)->name.len = 0;
+
+  (*target)->num.buf = NULL;
+  (*target)->num.len = 0;
+
+  (*target)->desc.buf = NULL;
+  (*target)->desc.len = 0;
+
+  return SUCCESS;
+}
+
+int init_errlist_struct(struct errlist_t **target) {
+  // check invalid argument
+  if (target == NULL) {
+    return INVAARG;
   }
+
+  // allocate and initialize struct
+  *target = malloc(sizeof(struct errlist_t));
+  (*target)->head = NULL;
+  (*target)->len = 0;
+
   return SUCCESS;
 }

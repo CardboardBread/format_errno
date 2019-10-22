@@ -1,73 +1,136 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
 
+#include "data_errno.h"
 #include "error_errno.h"
 
 #define BUFSIZE 256
+
+const char *nameheader = "NAME";
+const char *numheader = "NUM";
+const char *descheader = "DESCRIPTION";
 
 char execname[] = "errno";
 char *execargs[] = {"errno", "-l", NULL};
 
 int main(int argc, char **argv) {
 
+  // create pipe for exec output
   int stdfd[2];
   pipe(stdfd);
 
+  // fork process to exec errno
   switch(fork()) {
-    case -1:
+    case -1: // error, failed to fork
       return 1;
-    case 0:
+    case 0: // child
+
+      // replace stdout with pipe
       close(stdfd[0]);
       dup2(stdfd[1], STDOUT_FILENO);
 
-      close(stdfd[1]);
+      // replace stderr with pipe
+      close(stdfd[1]); // TODO: verify this is needed
       dup2(stdfd[1], STDERR_FILENO);
 
+      // execute `errno -l`
       execvp(execname, execargs);
       exit(1);
-    default:
+    default: // parent
+
+      // wait for child to finish before parsing output
       close(stdfd[1]);
       wait(NULL);
       break;
   }
 
+  // track largest name number and description strings
   int maxname = 0;
   int maxnum = 0;
   int maxdesc = 0;
 
-  struct error_t headnode;
-  headnode->name;
-  headnode->num;
-  headnode->desc;
+  // make head of error list
+  struct error_t *headnode;
+  init_error_struct(&headnode);
+  init_const_str(&(headnode->name), nameheader);
+  init_const_str(&(headnode->num), numheader);
+  init_const_str(&(headnode->desc), descheader);
   headnode->next = NULL;
 
-  struct buf_t buffer;
-  buffer->buf = malloc(sizeof(char) * BUFSIZE);
+  // make error list
+  struct errlist_t *elist;
+  init_errlist_struct(&elist);
+  append_err(elist, headnode);
 
+  // setup buffer for input
+  struct buf_t *buffer;
+  init_buf_struct(&buffer, BUFSIZE);
+
+  // read everything into buffer
   int nbytes = 0;
-  while (read_to_buf(&buffer, stdfd[0], &nbytes) < 1) {
+  while (read_to_buf(buffer, stdfd[0], &nbytes) < 1) {
 
-    // find all newlines in the buffer
-    while (find_newline(&buffer, &(buffer->consumed)) == 0) {
-
-      // allocate a new error
-      // parse the consumed section of the buffer for the errno string
-      // assemble the relevant pieces into the error struct
-      // append error struct to the list (tracking the tail might be useful to save time)
-      // clear the consumed memory and wait for the next newline
-    }
-
-    // allocate new error
-    struct error_t *err;
-    void *newerr = malloc(sizeof(struct error_t));
-    if (newerr != NULL) {
-      err = (struct error_t *) newerr;
-    } else {
+    // nothing left to read
+    if (nbytes == 0) {
       break;
     }
 
-    // construct buffer into error
-    assemble_error(&buffer, err);
+    // find all newlines in the buffer
+    struct error_t *err;
+    struct field_t spaces;
+    while (find_newline(buffer, &(buffer->consumed)) == 0) {
+
+      // increment consumed, since it is given an index, not a length
+      buffer->consumed++;
+
+      // allocate a new error
+      if (init_error_struct(&err) > 0) {
+        break;
+      }
+
+      // locate spaces splitting name from num from desc
+      if (find_spaces(buffer, &spaces) > 0) {
+        // invaarg or endflst
+      }
+
+      // copy name segment of errno line into str struct
+      if (assemble_tstr(buffer, &(err->name), 0, spaces.first, &maxname) > 0) {
+        // invaarg or enomem
+      }
+
+      // copy number segment of errno line into str struct
+      if (assemble_tstr(buffer, &(err->name), spaces.first + 1, spaces.second, &maxnum) > 0) {
+        // invaarg or enomem
+      }
+
+      // copy description segment of errno line into str struct
+      if (assemble_tstr(buffer, &(err->name), spaces.second + 1, buffer->consumed, &maxdesc) > 0) {
+        // invaarg or enomem
+      }
+
+      // append error to list
+      if (append_err(elist, err) > 0) {
+        // invaarg
+      }
+
+      // clear consumed
+      if (replace_consumed(buffer) > 0) {
+        // invaarg
+      }
+
+      // reset working data
+      err = NULL;
+      spaces.first = -1;
+      spaces.second = -1;
+
+      printf("\n");
+
+    }
+
   }
 
   exit(0);
