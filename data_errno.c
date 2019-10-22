@@ -9,13 +9,11 @@
 int read_to_buf(struct buf_t *buffer, int input, int *received) {
   // check valid inputs
   if (buffer == NULL || input < 0) {
-    printf("buffer: invaarg\n");
     return INVAARG;
   }
 
   // buffer full case
   if (buffer->inbuf == buffer->len) {
-    printf("buffer: full\n");
     return SUCCESS;
   }
 
@@ -28,7 +26,6 @@ int read_to_buf(struct buf_t *buffer, int input, int *received) {
 
   // check for error
   if (readlen < 0) {
-    printf("buffer: readfail\n");
     return LIBFAIL;
   }
 
@@ -40,18 +37,14 @@ int read_to_buf(struct buf_t *buffer, int input, int *received) {
     *received = readlen;
   }
 
-  printf("buffer: read %d\n", readlen);
   return SUCCESS;
 }
 
 int find_newline(struct buf_t *buffer, int *location) {
   // check valid arguments
   if (buffer == NULL) {
-    printf("newline: invaarg\n");
     return INVAARG;
   }
-
-  printf("\"%.*s\"\n", buffer->inbuf, buffer->buf);
 
   // loop through unconsumed until newline is found
   int index;
@@ -65,33 +58,26 @@ int find_newline(struct buf_t *buffer, int *location) {
         *location = index;
       }
 
-
-      printf("newline: index %d\n", index);
-      printf("newline: \"%.*s\"\n", index, buffer->buf);
       return SUCCESS;
     }
 
   }
 
-  printf("newline: endflst\n");
   return ENDFLST;
 }
 
 int assemble_tstr(struct buf_t *buffer, struct str_t *string, int begindex, int endex, int *maximum) {
   // check valid arguments
   if (buffer == NULL || string == NULL || begindex < 0 || endex > buffer->len) {
-    printf("tstr: invaarg\n");
     return INVAARG;
   }
 
   // calc how much space is needed
   int slen = endex - begindex;
 
-
   // attempt to malloc a space large enough, plus a terminator
   char *loc = malloc(sizeof(char) * (slen + 1));
   if (loc == NULL) {
-    printf("tstr: libfail\n");
     return LIBFAIL;
   }
 
@@ -104,18 +90,16 @@ int assemble_tstr(struct buf_t *buffer, struct str_t *string, int begindex, int 
 
   // copy data into string struct
   string->buf = loc;
-  memmove(string->buf, buffer->buf, slen);
+  memmove(string->buf, buffer->buf + begindex, slen);
   string->buf[slen] = '\0';
   string->len = slen;
 
-  printf("tstr: copy\n");
   return SUCCESS;
 }
 
 int find_spaces(struct buf_t *buffer, struct field_t *spaces) {
   // check valid arguments
   if (buffer == NULL || spaces == NULL) {
-    printf("space: invaarg\n");
     return INVAARG;
   }
 
@@ -147,10 +131,8 @@ int find_spaces(struct buf_t *buffer, struct field_t *spaces) {
 
   // make sure two spaces were found
   if (spaces->first > -1 && spaces->second > -1) {
-    printf("space: find %d, %d\n", spaces->first, spaces->second);
     return SUCCESS;
   } else {
-    printf("space: endflst\n");
     return ENDFLST;
   }
 
@@ -159,7 +141,6 @@ int find_spaces(struct buf_t *buffer, struct field_t *spaces) {
 int replace_consumed(struct buf_t *buffer) {
   // check invalid arguments
   if (buffer == NULL) {
-    printf("repl: invaarg\n");
     return INVAARG;
   }
 
@@ -168,7 +149,6 @@ int replace_consumed(struct buf_t *buffer) {
 
   // check if nothing should be moved/reset
   if (unconsumed < 1) {
-    printf("repl: nothing\n");
     return SUCCESS;
   }
 
@@ -185,7 +165,6 @@ int replace_consumed(struct buf_t *buffer) {
   buffer->inbuf -= buffer->consumed;
   buffer->consumed = 0;
 
-  printf("repl: move\n");
   return SUCCESS;
 }
 
@@ -267,7 +246,7 @@ int init_field_struct(struct field_t **target) {
   if (*target == NULL) {
     return LIBFAIL;
   }
-  
+
   (*target)->first = -1;
   (*target)->second = -1;
 

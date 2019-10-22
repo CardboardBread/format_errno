@@ -103,12 +103,12 @@ int main(int argc, char **argv) {
       }
 
       // copy number segment of errno line into str struct
-      if (assemble_tstr(buffer, &(err->name), spaces.first + 1, spaces.second, &maxnum) > 0) {
+      if (assemble_tstr(buffer, &(err->num), spaces.first + 1, spaces.second, &maxnum) > 0) {
         // invaarg or enomem
       }
 
       // copy description segment of errno line into str struct
-      if (assemble_tstr(buffer, &(err->name), spaces.second + 1, buffer->consumed, &maxdesc) > 0) {
+      if (assemble_tstr(buffer, &(err->desc), spaces.second + 1, buffer->consumed - 1, &maxdesc) > 0) {
         // invaarg or enomem
       }
 
@@ -126,12 +126,36 @@ int main(int argc, char **argv) {
       err = NULL;
       spaces.first = -1;
       spaces.second = -1;
-
-      printf("\n");
-
     }
 
   }
+
+  // now that we're done reading and the error list is assembled, start printing!
+  // loop through errlist and print with aligns based on the max trackers
+  struct error_t *cur;
+  for (cur = elist->head; cur != NULL; cur = cur->next) {
+    printf("%*.*s ", maxname, cur->name.len, cur->name.buf);
+    printf("%-*.*s ", maxnum, cur->num.len, cur->num.buf);
+    printf("%-*.*s\n", maxdesc, cur->desc.len, cur->desc.buf);
+  }
+
+  // iterate through list of errors, dealloc them all
+  //struct error_t *cur;
+  struct error_t *next;
+  for (cur = elist->head; cur != NULL; cur = next) {
+    next = cur->next;
+    free(cur->name.buf);
+    free(cur->num.buf);
+    free(cur->desc.buf);
+    free(cur);
+    cur = NULL;
+  }
+
+  // dealloc global structures
+  free(elist);
+
+  free(buffer->buf);
+  free(buffer);
 
   exit(0);
 }
